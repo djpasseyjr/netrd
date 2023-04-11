@@ -70,26 +70,37 @@ class SISModel(BaseDynamics):
 
         # SIS dynamics
         for t in range(1, L):
+            # If the epidemic ended in the previous timestep, then break.
+            if TS[:, t - 1].sum() < 1:
+                break
+
+            # Visit each node in a random order
             nodes = np.random.permutation(H.nodes)
             for i in nodes:
+                # Visit all neighbors of each infected node and
+                # randomly infect them with probability of beta
                 if H.nodes[i]['infected']:
                     neigh = H.neighbors(i)
                     for j in neigh:
                         if np.random.random() < beta:
                             H.nodes[j]['next_infected'] = 1
+
+                    # Cure the current infected node with probability mu
                     if np.random.random() < mu:
                         H.nodes[i]['infected'] = 0
-            infections = nx.get_node_attributes(H, 'infected')
+                    else:
+                        # If the node is not cured assign it to be
+                        # infected in the next timestep
+                        H.nodes[i]['next_infected'] = 1
             next_infections = nx.get_node_attributes(H, 'next_infected')
-
-            # store SIS dynamics for time t
-            TS[:, t] = np.array(list(infections.values()))
+            # Assign 'next_infected' nodes to become the currently infected
             nx.set_node_attributes(H, next_infections, 'infected')
+            # Reset 'next_infected' to zero for all nodes
             nx.set_node_attributes(H, 0, 'next_infected')
 
-            # if the epidemic dies off, stop
-            if TS[:, t].sum() < 1:
-                break
+            # store the new infected nodes for time t
+            infections = nx.get_node_attributes(H, 'infected')
+            TS[:, t] = np.array(list(infections.values()))
 
         # if the epidemic died off, pad the time series to the right shape
         if TS.shape[1] < L:

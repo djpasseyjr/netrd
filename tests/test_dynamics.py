@@ -8,8 +8,8 @@ Test dynamics algorithms.
 
 import networkx as nx
 from netrd import dynamics
-from netrd.dynamics import BaseDynamics
-from netrd.dynamics import LotkaVolterra
+from netrd.dynamics import BaseDynamics, LotkaVolterra, SISModel
+import numpy as np
 
 
 def test_dynamics_valid_dimensions():
@@ -29,8 +29,25 @@ def test_dynamics_valid_dimensions():
 
 
 def test_lotka_volterra():
-    """Test Lotka Volterra simulation"""
+    """Test Lotka Volterra simulation in the deterministic case."""
     g = nx.fast_gnp_random_graph(10, 0.001)
     lv_model = LotkaVolterra()
     assert lv_model.simulate(g, 100, stochastic=False).shape == (10, 100)
-    assert lv_model.simulate(g, 100, stochastic=False).shape == (10, 100)
+
+
+def test_SIS_small_initial_infected():
+    """Test that the SIS model works when initial seed is small."""
+    N = 10
+    # All to all graph
+    g = nx.fast_gnp_random_graph(N, 1.0)
+    sis_model = SISModel()
+    L = 20
+    X = sis_model.simulate(
+        g,
+        L,
+        num_seeds=1,  # Only one initially sick
+        beta=1.0,  # All neighbors are guarenteed to get infected bc beta=1
+        mu=1.0,  # All sick guarenteed to recover because mu=1
+    )
+    # We make sure that the sickness spreads
+    assert np.sum(X) > 1
